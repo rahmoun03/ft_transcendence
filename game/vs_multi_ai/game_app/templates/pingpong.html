@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PonGAme</title>
+    <!-- {% load static %} <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}"> -->
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+
+</head>
+<body>
+    <canvas id="pong" width="1700" height="900"></canvas>
+
+    <div id="popup" style="display: none;">
+        <div id="popup-content">
+            <h2> GAME ENDED</h2>
+            <button id="play-again">PLAY AGAIN</button>
+            <button id="go-home">GO HOMEPAGE</button>
+        </div>
+        <!-- <script src="script.js"></script> -->
+    {% load static %}<script src="{% static 'js/script.js' %}"></script>
+</body>
+</html>
+
+

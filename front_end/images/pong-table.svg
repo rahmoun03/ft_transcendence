@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#b8b8b8"/>
+  
+  <!-- Subtle Grid Pattern -->
+  <pattern id="smallGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#ADFF2F" stroke-width="1" opacity="0.8"/>
+  </pattern>
+  <rect width="800" height="600" fill="url(#smallGrid)"/>
+</svg>

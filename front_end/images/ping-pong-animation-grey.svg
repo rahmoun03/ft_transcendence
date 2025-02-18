@@ -1,0 +1,63 @@
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="400" height="300" fill="#2a2a2a"/>
+    
+    <!-- Table -->
+    <rect x="50" y="100" width="300" height="150" fill="#404040"/>
+    <line x1="200" y1="100" x2="200" y2="250" stroke="white" stroke-width="2"/>
+    
+    <!-- Watermark Title -->
+    <text x="200" y="180" fill="rgba(255,255,255,0.1)" font-family="monospace" font-size="28" text-anchor="middle" font-weight="bold">
+        FT_PING_PONG
+    </text>
+    
+    <!-- Paddles -->
+    <rect id="leftPaddle" x="60" y="160" width="10" height="40" fill="white">
+        <animate 
+            attributeName="y"
+            dur="2s"
+            values="160;120;160;200;160"
+            repeatCount="indefinite"/>
+    </rect>
+    
+    <rect id="rightPaddle" x="330" y="160" width="10" height="40" fill="white">
+        <animate 
+            attributeName="y"
+            dur="2s"
+            values="160;200;160;120;160"
+            repeatCount="indefinite"/>
+    </rect>
+    
+    <!-- Ball -->
+    <circle id="ball" r="5" fill="#ADFF2F">
+        <animate 
+            attributeName="cx"
+            dur="2s"
+            values="70;330;70"
+            repeatCount="indefinite"/>
+        <animate 
+            attributeName="cy"
+            dur="2s"
+            values="180;180;180"
+            repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Motion Lines -->
+    <g stroke="#ADFF2F" stroke-width="1" opacity="0.2">
+        <line x1="90" y1="170" x2="310" y2="170">
+            <animate
+                attributeName="opacity"
+                dur="1s"
+                values="0.2;0;0.2"
+                repeatCount="indefinite"/>
+        </line>
+        <line x1="90" y1="190" x2="310" y2="190">
+            <animate
+                attributeName="opacity"
+                dur="1s"
+                values="0.2;0;0.2"
+                repeatCount="indefinite"
+                begin="0.5s"/>
+        </line>
+    </g>
+</svg>

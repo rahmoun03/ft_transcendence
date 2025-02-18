@@ -1,0 +1,50 @@
+by adjusting the -Xms and -Xmx values in your Elasticsearch environment settings. These control the initial and maximum heap size. You can update them in your docker-compose.yml or in the elasticsearch.yml configuration file.
+
+environment:
+  - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+
+docker logs elasticsearch
+
+http://localhost:9200/_cluster/health
+
+
+
+https://silver-space-spoon-qp5pprp5p6pfxv4v-8081.app.github.dev/
+
+
+
+ELK:
+ - https://silver-space-spoon-qp5pprp5p6pfxv4v-9200.app.github.dev/
+ - https://silver-space-spoon-qp5pprp5p6pfxv4v-9200.app.github.dev/_cluster/health
+
+kibana:
+ - https://silver-space-spoon-qp5pprp5p6pfxv4v-5601.app.github.dev
+
+Adminer:
+ - https://silver-space-spoon-qp5pprp5p6pfxv4v-8081.app.github.dev/
+
+
+
+
+https://crispy-space-lamp-vqjqq4qjw4v2xrww-8080.app.github.dev/
+https://crispy-space-lamp-vqjqq4qjw4v2xrww-8001.app.github.dev/
+
+home page:
+ - https://crispy-space-lamp-vqjqq4qjw4v2xrww-8001.app.github.dev/index.html
+
+[+] elk		9200
+[-] logstash	5044->9600
+[+] kibana	5601
+[+] grafana	3000
+
+Logstash needs to be properly configured to communicate with Elasticsearch. If the configuration is incorrect, it could be causing the 502 error. Common configuration files that could cause issues:
+ - logstash.yml: Main Logstash configuration file.
+ - pipeline.conf (or similar pipeline configuration files): These define how Logstash interacts with data sources (input), filters, and outputs (usually Elasticsearch in your case).
+
+
+
+
+
+
+
+

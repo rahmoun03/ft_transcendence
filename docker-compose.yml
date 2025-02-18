@@ -1,0 +1,187 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=transcendence
+      - POSTGRES_USER=admindb
+      - POSTGRES_PASSWORD=admin123
+    networks:
+      - app-network
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1] backend
+    depends_on:
+      - db
+    networks:
+      - app-network
+    command: sh -c "sleep 5 && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+
+
+  chat:
+    build:
+      context: ./chat
+    container_name: chat
+    volumes:
+      - ./chat:/app
+    ports:
+      - "8008:8008"
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=chat.settings
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    command: sh -c "sleep 2 && python manage.py migrate && sleep 2 && daphne -b 0.0.0.0 -p 8008 chat.asgi:application"
+
+  frontend:
+    container_name: front_end
+    build:
+      context: ./front_end
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - app-network
+    volumes:
+      - nginx_logs:/var/log/nginx  # Share logs with Logstash
+
+  # elasticsearch:
+  #   container_name: elasticsearch
+  #   build:
+  #     context: ./elasticsearch/elasticsearch
+  #   restart: always #d
+  #   ports:
+  #     - "9200:9200"
+  #   networks:
+  #     - app-network
+  #   environment:
+  #     - discovery.type=single-node
+  #     - network.host=0.0.0.0  # to make sure it's accessible externally
+  #     # - ES_JAVA_OPTS=-Xms512m -Xmx512m  # Adjust memory limits
+  #     # - ES_JAVA_OPTS=-Xms2g -Xmx2g
+  #     # - ELASTIC_USERNAME=elastic
+  #     # - ELASTIC_PASSWORD=elastic123456
+  #     # curl -u elastic:changeme http://localhost:9200
+  #   depends_on:
+  #     - frontend
+  #   # volumes:
+  #   # - es_data:/usr/share/elasticsearch/data
+
+  # kibana:
+  #   container_name: kibana
+  #   build:
+  #     context: ./elasticsearch/kibana
+  #   ports:
+  #     - "5601:5601"
+  #   networks:
+  #     - app-network
+  #   depends_on:
+  #     - elasticsearch
+
+  # logstash:
+  #   container_name: logstash
+  #   build:
+  #     context: ./elasticsearch/logstash
+  #   ports:
+  #     - "5044:5044"  # Logstash listening for input
+  #     - "9600:9600"  # Logstash monitoring API
+  #   networks:
+  #     - app-network
+  #   depends_on:
+  #     - elasticsearch
+  #   volumes:
+  #     - nginx_logs:/var/log/nginx # # Access logs from nginx
+    # volumes:
+      # - ./elasticsearch/logstash/config:/usr/share/logstash/config
+      # - ./elasticsearch/logstash/pipeline:/usr/share/logstash/pipeline
+    # healthcheck:
+    # test: curl -s http://elasticsearch:9200 >/dev/null || exit 1 // to check if the logstash can connect to elk container
+
+  # grafana:
+  #   container_name: grafana
+  #   build:
+  #     context: ./grafana
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=admin
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   depends_on:
+  #     - elasticsearch
+  
+  # vs_ai:
+  #   image: vs_ai
+  #   build:
+  #     context: ./game/vs_ai
+  #   container_name: vs_ai
+  #   volumes:
+  #     - ./game/vs_ai/:/app
+  #   ports:
+  #     - "8001:8001"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - app-network
+
+  # vs_local:
+  #   image: vs_local
+  #   build:
+  #     context: ./game/vs_local
+  #   container_name: vs_local
+  #   volumes:
+  #     - ./game/vs_local/:/app
+  #   ports:
+  #     - "8002:8002"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - app-network
+
+  # vs_multi_ai:
+  #   image: vs_multi_ai
+  #   build:
+  #     context: ./game/vs_multi_ai
+  #   container_name: vs_multi_ai
+  #   volumes:
+  #     - ./game/vs_multi_ai/:/app
+  #   ports:
+  #     - "8003:8003"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - app-network
+
+volumes:
+  postgres_data:
+  nginx_logs:  # Named volume to share logs
+
+networks:
+  app-network:
+    driver: bridge
