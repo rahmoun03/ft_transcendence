@@ -358,7 +358,7 @@ export function ChatApp() {
         return chatContainer;
     }
 
-    function setupWebSocket(roomId) {
+    function setupWebSocket(roomId, userId) {
         if (socket) {
             socket.close();
         }
@@ -394,7 +394,7 @@ export function ChatApp() {
                         },
                         content: data.message,
                         timestamp: data.timestamp
-                    });
+                    }, userId);
                 }
             } catch (error) {
                 console.error('Error processing message:', error);
@@ -410,7 +410,7 @@ export function ChatApp() {
             // Only attempt to reconnect if we still have an active room
             if (activeRoom && activeRoom.id === roomId) {
                 console.log('Attempting to reconnect...');
-                setTimeout(() => setupWebSocket(roomId), 3000);
+                setTimeout(() => setupWebSocket(roomId, userId), 3000);
             }
         };
 
@@ -469,7 +469,7 @@ export function ChatApp() {
         startChat(friend.id);
     }
 
-    async function loadChatHistory(roomId) {
+    async function loadChatHistory(roomId, userId) {
         try {
             const response = await fetch(`${API_BASE_URL}/api/chat/rooms/${roomId}/messages/`, {
                 headers: {
@@ -491,7 +491,7 @@ export function ChatApp() {
                         },
                         content: message.content,
                         timestamp: message.timestamp
-                    });
+                    }, userId);
                 });
             }
         } catch (error) {
@@ -568,20 +568,19 @@ export function ChatApp() {
         }
     }
 
-    function displayMessage(message) {
+    function displayMessage(message, userId) {
         if (!messagesContainer) {
             console.error('Messages container not initialized');
             return;
         }
 
         try {
-            console.log('Displaying message:', message);
+            console.log('Displaying message:', message, userId);
 
             const messageElement = document.createElement('div');
-            const currentUserId = parseInt(localStorage.getItem('user_id'));
             
             const senderId = parseInt(message.sender?.id || message.sender || message.user_id);
-            const isSentByMe = senderId === currentUserId;
+            const isSentByMe = senderId !== userId;
             
             messageElement.className = `message-wrapper ${isSentByMe ? 'sent' : 'received'}`;
             
@@ -672,10 +671,10 @@ export function ChatApp() {
                 ${styles}
                 <div class="message-bubble">
                     <div class="message-content">
-                        <div class="message-header">
+                        <!-- <div class="message-header">
                             <span class="sender-name">${senderName}</span>
                             <span class="message-time">${new Date(timestamp).toLocaleTimeString()}</span>
-                        </div>
+                        </div> -->
                         <div class="message-text">${messageContent}</div>
                     </div>
                 </div>
@@ -736,6 +735,8 @@ export function ChatApp() {
     }
 
     async function startChat(userId) {
+        console.log("userID : ", userId);
+
         try {
             // First, try to find an existing direct message room
             const response = await fetch(`${API_BASE_URL}/api/chat/rooms/direct/${userId}/`, {
@@ -766,11 +767,11 @@ export function ChatApp() {
                 }
                 room = await createResponse.json();
             }
-
+            
             activeRoom = room; // Set the active room
             
             // Update chat header with friend info
-            updateChatHeader(room);
+            updateChatHeader(room, userId);
             
             // Clear previous messages
             if (messagesContainer) {
@@ -778,10 +779,10 @@ export function ChatApp() {
             }
 
             // Setup WebSocket connection
-            setupWebSocket(room.id);
+            setupWebSocket(room.id, userId);
             
             // Load chat history
-            await loadChatHistory(room.id);
+            await loadChatHistory(room.id, userId);
             
             // Enable input after chat starts
             if (messageInput) {
@@ -793,12 +794,23 @@ export function ChatApp() {
         }
     }
 
-    function updateChatHeader(room) {
+    function updateChatHeader(room, user_id) {
         const chatHeader = document.querySelector('.chat-header');
         if (!chatHeader) return;
 
-        const otherParticipant = room.participants.find(p => p.id !== parseInt(localStorage.getItem('user_id')));
-        if (!otherParticipant) return;
+        // Get user_id from localStorage, with proper error handling
+        // const user_id = localStorage.getItem('user_id');
+        console.log("room : ", room);
+        if (!user_id) {
+            console.error('No user_id found in localStorage');
+            return;
+        }
+
+        const otherParticipant = room.participants.find(p => p.id === parseInt(user_id));
+        if (!otherParticipant) {
+            console.error('Could not find other participant in room:', room);
+            return;
+        }
 
         chatHeader.innerHTML = `
             <div class="chat-user-info">
