@@ -327,39 +327,6 @@ export function ChatApp() {
     .friend-avatar-img:hover {
         border-color: #9EEB20;
     }
-    .message {
-        margin: 10px;
-        max-width: 70%;
-        padding: 10px;
-        border-radius: 10px;
-    }
-
-    .message.sent {
-        margin-left: auto;
-        background-color: var(--primary-color);
-        color: white;
-    }
-
-    .message.received {
-        margin-right: auto;
-        background-color: var(--secondary-background);
-    }
-
-    .message-content {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .message-header {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.8em;
-        margin-bottom: 5px;
-    }
-
-    .message-text {
-        word-break: break-word;
-    }
     `;
 
     const styleSheet = document.createElement('style');
@@ -586,14 +553,14 @@ export function ChatApp() {
             socket.send(JSON.stringify(message));
             
             // Also display the message locally
-            displayMessage({
-                sender: {
-                    id: parseInt(localStorage.getItem('user_id')),
-                    username: localStorage.getItem('username')
-                },
-                content: messageText,
-                timestamp: new Date().toISOString()
-            });
+            // displayMessage({
+            //     sender: {
+            //         id: parseInt(localStorage.getItem('user_id')),
+            //         username: localStorage.getItem('username')
+            //     },
+            //     content: messageText,
+            //     timestamp: new Date().toISOString()
+            // });
 
             messageInput.value = '';
         } catch (error) {
@@ -608,36 +575,109 @@ export function ChatApp() {
         }
 
         try {
-            console.log('Displaying message:', message); // Debug log
+            console.log('Displaying message:', message);
 
             const messageElement = document.createElement('div');
             const currentUserId = parseInt(localStorage.getItem('user_id'));
-            const senderId = message.sender?.id || message.user_id;
+            
+            const senderId = parseInt(message.sender?.id || message.sender || message.user_id);
             const isSentByMe = senderId === currentUserId;
             
-            messageElement.className = `message ${isSentByMe ? 'sent' : 'received'}`;
+            messageElement.className = `message-wrapper ${isSentByMe ? 'sent' : 'received'}`;
             
-            // Handle different message formats
             const messageContent = message.content || message.message;
             const senderName = message.sender?.username || message.username;
             const timestamp = message.timestamp || new Date().toISOString();
 
-            console.log('Message details:', { // Debug log
-                senderId,
-                currentUserId,
-                isSentByMe,
-                messageContent,
-                senderName,
-                timestamp
-            });
+            const styles = `
+                <style>
+                    .messages-container {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                        padding: 20px;
+                    }
+
+                    .message-wrapper {
+                        display: flex;
+                        width: 100%;
+                        margin: 2px 0;
+                    }
+
+                    .message-wrapper.sent {
+                        justify-content: flex-end;
+                    }
+
+                    .message-wrapper.received {
+                        justify-content: flex-start;
+                    }
+
+                    .message-bubble {
+                        max-width: 70%;
+                        padding: 10px;
+                        border-radius: 15px;
+                        position: relative;
+                    }
+
+                    .message-wrapper.sent .message-bubble {
+                        background-color: #9EEB20;
+                        border-bottom-right-radius: 5px;
+                    }
+
+                    .message-wrapper.received .message-bubble {
+                        background-color: #2c3338;
+                        border-bottom-left-radius: 5px;
+                    }
+
+                    .message-wrapper.sent .message-text,
+                    .message-wrapper.sent .message-header {
+                        color: #000000;
+                    }
+
+                    .message-wrapper.received .message-text,
+                    .message-wrapper.received .message-header {
+                        color: #ffffff;
+                    }
+
+                    .message-content {
+                        display: flex;
+                        flex-direction: column;
+                    }
+
+                    .message-header {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 0.8em;
+                        margin-bottom: 5px;
+                        opacity: 0.8;
+                    }
+
+                    .message-text {
+                        word-break: break-word;
+                        line-height: 1.4;
+                    }
+
+                    .sender-name {
+                        font-weight: bold;
+                    }
+
+                    .message-time {
+                        font-size: 0.75em;
+                        opacity: 0.8;
+                    }
+                </style>
+            `;
 
             messageElement.innerHTML = `
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="sender-name">${senderName}</span>
-                        <span class="message-time">${new Date(timestamp).toLocaleTimeString()}</span>
+                ${styles}
+                <div class="message-bubble">
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="sender-name">${senderName}</span>
+                            <span class="message-time">${new Date(timestamp).toLocaleTimeString()}</span>
+                        </div>
+                        <div class="message-text">${messageContent}</div>
                     </div>
-                    <div class="message-text">${messageContent}</div>
                 </div>
             `;
 

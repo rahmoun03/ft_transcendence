@@ -94,6 +94,7 @@ services:
       - app-network
     volumes:
       - nginx_logs:/var/log/nginx  # Share logs with Logstash
+      - ./front_end/src:/usr/share/nginx/html/src
 
   # elasticsearch:
   #   container_name: elasticsearch
