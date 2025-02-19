@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta # added
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,16 +34,22 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'backend']
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-
-    
-    "http://localhost:8001",
-    "http://127.0.0.1:8081",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-CORS_ALLOW_HEADERS = ['*']
 
+# Add WebSocket specific CORS settings
+CORS_ALLOWED_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Add to settings.py
 AUTHENTICATION_BACKENDS = [
@@ -71,9 +78,10 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'UserAccount',
     'Friends',
+    'channels',
+    'Chat.apps.ChatConfig',  # Use the specific app config instead of just 'Chat'
 ]
 # settings.py
-import os
 MEDIA_URL = '/media/'  # URL to access media files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Path to the media directory
 
@@ -170,3 +178,57 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Add this at the bottom of settings.py
+ASGI_APPLICATION = 'backend.asgi.application'
+
+# Channel Layers configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],  # Make sure this matches your docker-compose service name
+            "capacity": 1500,
+            "expiry": 10,
+        },
+    },
+}
+
+# WebSocket specific settings
+CHANNEL_SETTINGS = {
+    "MIDDLEWARE": [
+        "channels.middleware.BaseMiddleware",
+        "channels.sessions.SessionMiddleware",
+        "channels.auth.AuthMiddleware",
+    ],
+}
+
+# Add this to your settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'Chat': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+# Redis settings
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')

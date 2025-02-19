@@ -27,6 +27,9 @@ RUN pip install -r requirements.txt
 COPY . .
 RUN chmod 777 /app
 
+ENV DJANGO_SETTINGS_MODULE=backend.settings
+ENV PYTHONPATH=/app
+
 EXPOSE 8000
 
-# CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]

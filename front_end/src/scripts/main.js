@@ -1,5 +1,6 @@
 import { Home, Login, Register, Dashboard , handleOAuthCallback } from './home.js';
 import { Profile } from './profile.js';
+import { ChatApp } from './chat.js';
 // import { startGame } from './game/game.js';
 
 class App {
@@ -110,7 +111,10 @@ class App {
                     window.location.hash = '#/';
                     return;
                 }
-                content.innerHTML = '<h1>this is the Chat</h1>';
+                content.innerHTML = '';  // Clear existing content
+                const chat = ChatApp();
+                chat.setCurrentUser(localStorage.getItem('username'));
+                content.appendChild(chat.initialize());
                 break;
             case '#/gameai':
                 if (!this.isAuthenticated()) {
