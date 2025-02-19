@@ -5,25 +5,39 @@ from rest_framework.response import Response
 from .models import ChatRoom, Message
 from .serializers import ChatRoomSerializer, MessageSerializer, UserProfileSerializer
 from UserAccount.models import UserProfile
+from django.db.models import Q
+import uuid
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def create_chat_room(request):
-    participant_ids = request.data.get('participants', [])
-    name = request.data.get('name')
-    is_direct = request.data.get('is_direct_message', False)
-
+def create_room(request):
     try:
+        data = request.data
+        participants = data.get('participants', [])
+        is_direct = data.get('is_direct_message', False)
+
+        if is_direct:
+            # Check if a direct message room already exists
+            existing_room = ChatRoom.objects.filter(
+                is_direct_message=True,
+                participants=request.user
+            ).filter(
+                participants__in=participants
+            ).first()
+
+            if existing_room:
+                return Response(ChatRoomSerializer(existing_room).data)
+
+        # Create new room
         room = ChatRoom.objects.create(
-            name=name,
+            name=data.get('name', f'Room_{uuid.uuid4().hex[:8]}'),
             is_direct_message=is_direct
         )
-        room.participants.add(request.user, *participant_ids)
+        room.participants.add(request.user, *participants)
         
-        serializer = ChatRoomSerializer(room)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(ChatRoomSerializer(room).data)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': str(e)}, status=400)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -62,4 +76,22 @@ def get_available_users(request):
     """Get all users except the current user"""
     users = UserProfile.objects.exclude(id=request.user.id)
     serializer = UserProfileSerializer(users, many=True)
-    return Response(serializer.data) 
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_direct_message_room(request, user_id):
+    try:
+        # Find existing direct message room between the two users
+        room = ChatRoom.objects.filter(
+            is_direct_message=True,
+            participants=request.user
+        ).filter(
+            participants=user_id
+        ).first()
+        
+        if room:
+            return Response(ChatRoomSerializer(room).data)
+        return Response({'detail': 'Room not found'}, status=404)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=400) 

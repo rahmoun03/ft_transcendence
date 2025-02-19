@@ -415,18 +415,23 @@ export function ChatApp() {
 
         socket.onmessage = (event) => {
             try {
-                console.log('Received message:', event.data);
+                console.log('Received WebSocket message:', event.data);
                 const data = JSON.parse(event.data);
-                displayMessage({
-                    sender: {
-                        id: data.user_id,
-                        username: data.username
-                    },
-                    content: data.message,
-                    timestamp: data.timestamp
-                });
+                
+                if (data.type === 'chat_message') {
+                    console.log('Processing chat message:', data); // Debug log
+                    displayMessage({
+                        sender: {
+                            id: data.user_id,
+                            username: data.username
+                        },
+                        content: data.message,
+                        timestamp: data.timestamp
+                    });
+                }
             } catch (error) {
                 console.error('Error processing message:', error);
+                console.error('Raw message data:', event.data);
             }
         };
 
@@ -505,24 +510,23 @@ export function ChatApp() {
                 }
             });
             const messages = await response.json();
-            console.log("Loading chat history:", messages);
-            
-            // Clear existing messages
+            console.log('Loaded chat history:', messages); // Debug log
+
             if (messagesContainer) {
                 messagesContainer.innerHTML = '';
-            }
-
-            // Display each message
-            messages.forEach(message => {
-                displayMessage({
-                    sender: {
-                        id: message.sender,
-                        username: message.username || 'Unknown'
-                    },
-                    content: message.content,
-                    timestamp: message.timestamp
+                
+                messages.forEach(message => {
+                    console.log('Processing history message:', message); // Debug log
+                    displayMessage({
+                        sender: {
+                            id: message.sender,
+                            username: message.username
+                        },
+                        content: message.content,
+                        timestamp: message.timestamp
+                    });
                 });
-            });
+            }
         } catch (error) {
             console.error('Failed to load chat history:', error);
         }
@@ -566,55 +570,83 @@ export function ChatApp() {
             console.log('Cannot send message:', {
                 hasText: !!messageText,
                 hasSocket: !!socket,
-                hasActiveRoom: !!activeRoom
+                hasActiveRoom: !!activeRoom,
+                socketState: socket?.readyState
             });
             return;
         }
 
-        const message = {
-            message: messageText,
-            room_id: activeRoom.id
-        };
+        try {
+            const message = {
+                message: messageText,
+                room_id: activeRoom.id
+            };
 
-        socket.send(JSON.stringify(message));
-        messageInput.value = '';
+            console.log('Sending message:', message);
+            socket.send(JSON.stringify(message));
+            
+            // Also display the message locally
+            displayMessage({
+                sender: {
+                    id: parseInt(localStorage.getItem('user_id')),
+                    username: localStorage.getItem('username')
+                },
+                content: messageText,
+                timestamp: new Date().toISOString()
+            });
+
+            messageInput.value = '';
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
     }
 
     function displayMessage(message) {
-        if (!messagesContainer) return;
+        if (!messagesContainer) {
+            console.error('Messages container not initialized');
+            return;
+        }
 
-        const messageElement = document.createElement('div');
-        const currentUserId = parseInt(localStorage.getItem('user_id'));
-        // Check if message has sender.id or just user_id
-        const senderId = message.sender?.id || message.user_id;
-        const isSentByMe = senderId === currentUserId;
-        
-        messageElement.className = `message ${isSentByMe ? 'sent' : 'received'}`;
-        
-        // Handle different message formats
-        const messageContent = message.content || message.message;
-        const senderName = message.sender?.username || message.username;
-        const timestamp = message.timestamp || new Date().toISOString();
+        try {
+            console.log('Displaying message:', message); // Debug log
 
-        messageElement.innerHTML = `
-            <div class="message-content">
-                <div class="message-header">
-                    <span class="sender-name">${senderName}</span>
-                    <span class="message-time">${new Date(timestamp).toLocaleTimeString()}</span>
+            const messageElement = document.createElement('div');
+            const currentUserId = parseInt(localStorage.getItem('user_id'));
+            const senderId = message.sender?.id || message.user_id;
+            const isSentByMe = senderId === currentUserId;
+            
+            messageElement.className = `message ${isSentByMe ? 'sent' : 'received'}`;
+            
+            // Handle different message formats
+            const messageContent = message.content || message.message;
+            const senderName = message.sender?.username || message.username;
+            const timestamp = message.timestamp || new Date().toISOString();
+
+            console.log('Message details:', { // Debug log
+                senderId,
+                currentUserId,
+                isSentByMe,
+                messageContent,
+                senderName,
+                timestamp
+            });
+
+            messageElement.innerHTML = `
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="sender-name">${senderName}</span>
+                        <span class="message-time">${new Date(timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-text">${messageContent}</div>
                 </div>
-                <div class="message-text">${messageContent}</div>
-            </div>
-        `;
+            `;
 
-        messagesContainer.appendChild(messageElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        console.log('Message displayed:', {
-            senderId,
-            currentUserId,
-            isSentByMe,
-            content: messageContent
-        });
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } catch (error) {
+            console.error('Error displaying message:', error);
+            console.error('Message data:', message);
+        }
     }
 
     function setCurrentUser(username) {
@@ -665,22 +697,36 @@ export function ChatApp() {
 
     async function startChat(userId) {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/chat/rooms/create/`, {
-                method: 'POST',
+            // First, try to find an existing direct message room
+            const response = await fetch(`${API_BASE_URL}/api/chat/rooms/direct/${userId}/`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    participants: [userId],
-                    is_direct_message: true,
-                    name: `direct_${Date.now()}`
-                })
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
             });
 
-            if (!response.ok) throw new Error('Failed to create chat room');
-            
-            const room = await response.json();
+            let room;
+            if (response.ok) {
+                room = await response.json();
+            } else if (response.status === 404) {
+                // If no room exists, create a new one
+                const createResponse = await fetch(`${API_BASE_URL}/api/chat/rooms/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        participants: [userId],
+                        is_direct_message: true
+                    })
+                });
+                
+                if (!createResponse.ok) {
+                    throw new Error('Failed to create chat room');
+                }
+                room = await createResponse.json();
+            }
+
             activeRoom = room; // Set the active room
             
             // Update chat header with friend info

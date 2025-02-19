@@ -24,6 +24,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='sender.username', read_only=True)
+    sender = serializers.IntegerField(source='sender.id')
     
     class Meta:
         model = Message

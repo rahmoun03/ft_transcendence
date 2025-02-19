@@ -107,9 +107,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
             message = data['message']
             user = self.scope["user"]
+            
+            logger.info(f"Received message from {user.username}: {message}")
 
             # Save message to database
             message_instance = await self.save_message(user.id, message)
+            logger.info(f"Saved message to database with id: {message_instance.id}")
 
             # Send message to room group
             await self.channel_layer.group_send(
@@ -122,25 +125,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'timestamp': message_instance.timestamp.isoformat()
                 }
             )
+            logger.info(f"Message sent to room group: {self.room_group_name}")
         except Exception as e:
             logger.error(f"Error in receive: {str(e)}")
 
     async def chat_message(self, event):
-        # Send message to WebSocket
-        await self.send(text_data=json.dumps({
-            'message': event['message'],
-            'user_id': event['user_id'],
-            'username': event['username'],
-            'timestamp': event['timestamp'],
-            'type': 'chat_message'
-        }))
+        try:
+            # Send message to WebSocket
+            message_data = {
+                'type': 'chat_message',
+                'message': event['message'],
+                'user_id': event['user_id'],
+                'username': event['username'],
+                'timestamp': event['timestamp']
+            }
+            logger.info(f"Sending message to client: {message_data}")  # Debug log
+            await self.send(text_data=json.dumps(message_data))
+        except Exception as e:
+            logger.error(f"Error in chat_message: {str(e)}")
 
     @database_sync_to_async
     def save_message(self, user_id, content):
-        user = UserProfile.objects.get(id=user_id)
-        room = ChatRoom.objects.get(id=self.room_id)
-        return Message.objects.create(
-            room=room,
-            sender=user,
-            content=content
-        ) 
+        try:
+            user = UserProfile.objects.get(id=user_id)
+            room = ChatRoom.objects.get(id=self.room_id)
+            message = Message.objects.create(
+                room=room,
+                sender=user,
+                content=content
+            )
+            logger.info(f"Saved message: {message.id} from user {user.username}")  # Debug log
+            return message
+        except Exception as e:
+            logger.error(f"Error saving message: {str(e)}")
+            raise 
